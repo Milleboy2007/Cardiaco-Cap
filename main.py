@@ -82,4 +82,5 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\nArrêt du programme.")
         # Fermer le socket
+        sock.sendto("Connexion Fermer\n".encode(), dest_addr)
         sock.close()
