@@ -4,6 +4,7 @@ import board
 import busio
 from adafruit_ads1x15.ads1115 import ADS1115
 from adafruit_ads1x15.analog_in import AnalogIn
+import json
 
 PORT = 8888
 DEST_IP = "10.10.22.246"
@@ -61,6 +62,14 @@ if __name__ == "__main__":
                     # On s'assure que la valeur est réaliste (entre 40 et 200 BPM)
                     if 40 <= bpm_instantane <= 200:
                         print(f"❤️ BATTEMENT ! | Temps: {temps_ecoule:.2f}s | BPM: {bpm_instantane:.0f}")
+                        # d = {
+                        #     "status": "ready",
+                        #     "data": {
+                        #         "value": f"{bpm_instantane:.0f}",
+                        #         "unite": "BPM"
+                        #     }
+                        # }
+                        
                         sock.sendto(f"{bpm_instantane:.0f}\n".encode(), dest_addr)
 
                     # Mise à jour du chronomètre pour le prochain battement
