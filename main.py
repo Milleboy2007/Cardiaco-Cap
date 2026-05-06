@@ -16,7 +16,7 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 dest_addr = (DEST_IP, PORT)
 
 # Envoyer le message
-sock.sendto("Connexion Etablie\n".encode(), dest_addr)
+#sock.sendto("Connexion Etablie\n".encode(), dest_addr)
 
 # Initialisation de l'I2C et de l'ADS1115
 i2c = busio.I2C(board.SCL, board.SDA)
@@ -82,5 +82,5 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\nArrêt du programme.")
         # Fermer le socket
-        sock.sendto("Connexion Fermer\n".encode(), dest_addr)
+        #sock.sendto("Connexion Fermer\n".encode(), dest_addr)
         sock.close()
