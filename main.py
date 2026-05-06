@@ -62,15 +62,16 @@ if __name__ == "__main__":
                     # On s'assure que la valeur est réaliste (entre 40 et 200 BPM)
                     if 40 <= bpm_instantane <= 200:
                         print(f"❤️ BATTEMENT ! | Temps: {temps_ecoule:.2f}s | BPM: {bpm_instantane:.0f}")
-                        # d = {
-                        #     "status": "ready",
-                        #     "data": {
-                        #         "value": f"{bpm_instantane:.0f}",
-                        #         "unite": "BPM"
-                        #     }
-                        # }
+                        d = {
+                            "status": "ready",
+                            "data": {
+                                "value": f"{bpm_instantane:.0f}",
+                                "unite": "BPM"
+                            }
+                        }
                         
-                        sock.sendto(f"{bpm_instantane:.0f}\n".encode(), dest_addr)
+                        # sock.sendto(f"{bpm_instantane:.0f}\n".encode(), dest_addr)
+                        sock.sendto(json.dumps(d).encode('utf-8'), dest_addr)
 
                     # Mise à jour du chronomètre pour le prochain battement
                     dernier_battement = temps_actuel
@@ -82,5 +83,5 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\nArrêt du programme.")
         # Fermer le socket
-        #sock.sendto("Connexion Fermer\n".encode(), dest_addr)
+        sock.sendto(json.dumps({"status": "not ready"}).encode(), dest_addr)
         sock.close()
