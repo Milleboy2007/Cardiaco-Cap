@@ -40,6 +40,12 @@ print("Appuyez sur Ctrl+C pour quitter.\n")
 
 if __name__ == "__main__":
     try:
+        sock.sendto(json.dumps({
+            "status": "ready",                          
+            "data": {
+                "value": "0",
+                "unite": "BPM"
+            }}).encode(), dest_addr)
         while True:
             # 1. Lecture et Filtrage
             raw_value = data.value
@@ -83,5 +89,10 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\nArrêt du programme.")
         # Fermer le socket
-        sock.sendto(json.dumps({"status": "not ready"}).encode(), dest_addr)
+        sock.sendto(json.dumps({
+            "status": "not ready",
+            "data": {
+                "value": "0",
+                "unite": "BPM"
+            }}).encode(), dest_addr)
         sock.close()
