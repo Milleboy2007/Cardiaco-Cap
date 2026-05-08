@@ -107,3 +107,13 @@ if __name__ == "__main__":
                 "unite": "BPM"
             }}).encode(), dest_addr)
         sock.close()
+    except e:
+        print("\nProbleme avec programme.\n", e)
+        # Fermer le socket
+        sock.sendto(json.dumps({
+            "status": "not ready",
+            "data": {
+                "value": "0",
+                "unite": "BPM"
+            }}).encode(), dest_addr)
+        sock.close()
