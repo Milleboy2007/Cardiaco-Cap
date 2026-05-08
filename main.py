@@ -40,6 +40,7 @@ print("Appuyez sur Ctrl+C pour quitter.\n")
 
 if __name__ == "__main__":
     try:
+        havePulseBefore = False
         sock.sendto(json.dumps({
             "status": "ready",                          
             "data": {
@@ -51,10 +52,9 @@ if __name__ == "__main__":
             raw_value = data.value
             value = (alpha * old_value) + (1.0 - alpha) * raw_value
             temps_actuel = time.time()
-
+            
             # 2. Détection du battement (dépassement du seuil)
             if value > SEUIL_BATTEMENT:
-
                 # Temps écoulé depuis le dernier pic (en secondes)
                 temps_ecoule = temps_actuel - dernier_battement
             
@@ -64,7 +64,6 @@ if __name__ == "__main__":
 
                     # 3. Calcul des BPM (60 secondes divisées par le temps entre 2 battements)
                     bpm_instantane = (60.0 / temps_ecoule) - 100
-
                     # On s'assure que la valeur est réaliste (entre 40 et 200 BPM)
                     if 40 <= bpm_instantane <= 200:
                         print(f"❤️ BATTEMENT ! | Temps: {temps_ecoule:.2f}s | BPM: {bpm_instantane:.0f}")
@@ -78,9 +77,21 @@ if __name__ == "__main__":
                         
                         # sock.sendto(f"{bpm_instantane:.0f}\n".encode(), dest_addr)
                         sock.sendto(json.dumps(d).encode('utf-8'), dest_addr)
-
                     # Mise à jour du chronomètre pour le prochain battement
                     dernier_battement = temps_actuel
+                havePulseBefore = True
+            elif value < SEUIL_BATTEMENT and havePulseBefore:
+                print("PU DE POULS")
+                d = {
+                    "status": "ready",
+                    "data": {
+                        "value": "0",
+                        "unite": "BPM"
+                    }
+                }
+                
+                sock.sendto(json.dumps(d).encode('utf-8'), dest_addr)
+                havePulseBefore = False
 
             # Mise à jour de l'état pour la boucle suivante
             old_value = value
