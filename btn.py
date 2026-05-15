@@ -4,7 +4,7 @@ import socket
 import json
 
 # --- CONFIGURATION ---
-BROCHE_BOUTON = 22  # Le numéro du GPIO (et non le numéro physique de la pin)
+BROCHE_BOUTON = 22 
 PORT = 8888
 DEST_IP = "192.168.26.1"
 
@@ -21,7 +21,6 @@ class CalculateurBPMHardware:
         self.historique_clics = []
         self.delai_reinitialisation = 2.5 # Réinitialise après 2.5s sans appui
         
-        # --- NOUVEAUTÉ : Variables pour la gestion de l'inactivité ---
         self.temps_dernier_clic = time.time()
         self.zero_envoye = False 
 
@@ -41,7 +40,6 @@ class CalculateurBPMHardware:
     def clic_tap(self, gpio, level, tick):
         temps_actuel = time.time()
 
-        # --- NOUVEAUTÉ : On met à jour le dernier clic et on abaisse le drapeau ---
         self.temps_dernier_clic = temps_actuel
         self.zero_envoye = False
 
@@ -86,7 +84,6 @@ class CalculateurBPMHardware:
             }
             sock.sendto(json.dumps(d).encode('utf-8'), dest_addr)
 
-    # --- NOUVEAUTÉ : Fonction qui surveille le temps écoulé ---
     def verifier_inactivite(self):
         # Si on dépasse 2.5s ET qu'on n'a pas encore envoyé le 0
         if not self.zero_envoye and (time.time() - self.temps_dernier_clic) > self.delai_reinitialisation:
@@ -112,8 +109,7 @@ if __name__ == "__main__":
             "value": "0",
             "unite": "BPM"
         }}).encode(), dest_addr)
-    
-    # Connexion au daemon pigpio
+
     pi = pigpio.pi()
     
     if not pi.connected:
@@ -127,12 +123,10 @@ if __name__ == "__main__":
     try:
         # Boucle infinie pour garder le programme ouvert
         while True:
-            # --- NOUVEAUTÉ : On vérifie l'inactivité à chaque tour ---
             calculateur.verifier_inactivite()
-            time.sleep(0.1) # Réduit à 0.1s pour réagir plus vite au timeout au lieu de 1s
+            time.sleep(0.1)
             
     except KeyboardInterrupt:
-        # Arrêt propre si on fait Ctrl+C
         print("\nArrêt du programme...")
         calculateur.callback_bouton.cancel()
         sock.sendto(json.dumps({
@@ -142,7 +136,7 @@ if __name__ == "__main__":
             "unite": "BPM"
         }}).encode(), dest_addr)
         pi.stop()
-    except Exception as e: # --- CORRECTION : 'except e:' n'est pas valide en Python ---
+    except Exception as e:
         print(f"Erreur inattendue : {e}")
         sock.sendto(json.dumps({
         "status": "not ready",                          
