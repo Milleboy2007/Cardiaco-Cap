@@ -1,8 +1,19 @@
 import pigpio
 import time
+import socket
+import json
 
 # --- CONFIGURATION ---
 BROCHE_BOUTON = 22  # Le numéro du GPIO (et non le numéro physique de la pin)
+PORT = 8888
+DEST_IP = "10.10.22.246"
+
+
+# Créer le socket
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+# Créer un objet pour l'adresse
+dest_addr = (DEST_IP, PORT)
 
 class CalculateurBPMHardware:
     def __init__(self, pi, pin):
@@ -50,12 +61,38 @@ class CalculateurBPMHardware:
             moyenne_ecart = sum(differences_temps) / len(differences_temps)
             bpm = 60.0 / moyenne_ecart
             
-            print(f"BPM: {int(bpm)}")
+            print(f"❤️ BPM: {int(bpm)}")
+            d = {
+                "status": "ready",
+                "data": {
+                    "value": f"{int(bpm)}",
+                    "unite": "BPM"
+                }
+            }
+            
+            # sock.sendto(f"{bpm_instantane:.0f}\n".encode(), dest_addr)
+            sock.sendto(json.dumps(d).encode('utf-8'), dest_addr)
         else:
             print("BPM: -- (Appuie encore)")
+            d = {
+                "status": "ready",
+                "data": {
+                    "value": "0",
+                    "unite": "BPM"
+                }
+            }
+            
+            sock.sendto(json.dumps(d).encode('utf-8'), dest_addr)
+            
 
 # --- LANCEMENT ---
 if __name__ == "__main__":
+    sock.sendto(json.dumps({
+        "status": "ready",                          
+        "data": {
+            "value": "0",
+            "unite": "BPM"
+        }}).encode(), dest_addr)
     # Connexion au daemon pigpio
     pi = pigpio.pi()
     
