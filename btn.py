@@ -6,8 +6,7 @@ import json
 # --- CONFIGURATION ---
 BROCHE_BOUTON = 22  # Le numéro du GPIO (et non le numéro physique de la pin)
 PORT = 8888
-DEST_IP = "10.10.22.246"
-
+DEST_IP = "192.168.26.1"
 
 # Créer le socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -21,6 +20,10 @@ class CalculateurBPMHardware:
         self.pin = pin
         self.historique_clics = []
         self.delai_reinitialisation = 2.5 # Réinitialise après 2.5s sans appui
+        
+        # --- NOUVEAUTÉ : Variables pour la gestion de l'inactivité ---
+        self.temps_dernier_clic = time.time()
+        self.zero_envoye = False 
 
         # Configuration de la broche
         self.pi.set_mode(self.pin, pigpio.INPUT)
@@ -28,17 +31,19 @@ class CalculateurBPMHardware:
         # On active la résistance Pull-Up interne (le bouton connecte à la masse)
         self.pi.set_pull_up_down(self.pin, pigpio.PUD_UP) 
         
-        # Filtre anti-rebond (glitch filter) : ignore les changements de moins de 50 000 microsecondes (50 ms)
+        # Filtre anti-rebond (glitch filter) : ignore les changements de moins de 50 ms
         self.pi.set_glitch_filter(self.pin, 50000)
 
         # Création de l'interruption (callback)
-        # FALLING_EDGE = déclenchement quand la tension chute (quand on appuie et ferme le circuit vers GND)
         self.callback_bouton = self.pi.callback(self.pin, pigpio.FALLING_EDGE, self.clic_tap)
         print(f"Système prêt sur le GPIO {self.pin}. Tapote le bouton en rythme !")
 
     def clic_tap(self, gpio, level, tick):
-        # Cette fonction est appelée automatiquement à chaque appui valide
         temps_actuel = time.time()
+
+        # --- NOUVEAUTÉ : On met à jour le dernier clic et on abaisse le drapeau ---
+        self.temps_dernier_clic = temps_actuel
+        self.zero_envoye = False
 
         # Si le dernier clic est trop vieux, on recommence à zéro
         if self.historique_clics and (temps_actuel - self.historique_clics[-1]) > self.delai_reinitialisation:
@@ -69,8 +74,6 @@ class CalculateurBPMHardware:
                     "unite": "BPM"
                 }
             }
-            
-            # sock.sendto(f"{bpm_instantane:.0f}\n".encode(), dest_addr)
             sock.sendto(json.dumps(d).encode('utf-8'), dest_addr)
         else:
             print("BPM: -- (Appuie encore)")
@@ -81,9 +84,25 @@ class CalculateurBPMHardware:
                     "unite": "BPM"
                 }
             }
-            
             sock.sendto(json.dumps(d).encode('utf-8'), dest_addr)
+
+    # --- NOUVEAUTÉ : Fonction qui surveille le temps écoulé ---
+    def verifier_inactivite(self):
+        # Si on dépasse 2.5s ET qu'on n'a pas encore envoyé le 0
+        if not self.zero_envoye and (time.time() - self.temps_dernier_clic) > self.delai_reinitialisation:
+            self.historique_clics = [] # On vide l'historique
+            self.zero_envoye = True    # On mémorise l'envoi pour ne pas spammer le réseau
             
+            print("--- Timeout : Aucun battement. Envoi BPM 0 ---")
+            d = {
+                "status": "ready",
+                "data": {
+                    "value": "0",
+                    "unite": "BPM"
+                }
+            }
+            sock.sendto(json.dumps(d).encode('utf-8'), dest_addr)
+
 
 # --- LANCEMENT ---
 if __name__ == "__main__":
@@ -93,6 +112,7 @@ if __name__ == "__main__":
             "value": "0",
             "unite": "BPM"
         }}).encode(), dest_addr)
+    
     # Connexion au daemon pigpio
     pi = pigpio.pi()
     
@@ -105,9 +125,11 @@ if __name__ == "__main__":
     calculateur = CalculateurBPMHardware(pi, BROCHE_BOUTON)
 
     try:
-        # Boucle infinie pour garder le programme ouvert en attendant les clics
+        # Boucle infinie pour garder le programme ouvert
         while True:
-            time.sleep(1)
+            # --- NOUVEAUTÉ : On vérifie l'inactivité à chaque tour ---
+            calculateur.verifier_inactivite()
+            time.sleep(0.1) # Réduit à 0.1s pour réagir plus vite au timeout au lieu de 1s
             
     except KeyboardInterrupt:
         # Arrêt propre si on fait Ctrl+C
@@ -120,7 +142,8 @@ if __name__ == "__main__":
             "unite": "BPM"
         }}).encode(), dest_addr)
         pi.stop()
-    except e:
+    except Exception as e: # --- CORRECTION : 'except e:' n'est pas valide en Python ---
+        print(f"Erreur inattendue : {e}")
         sock.sendto(json.dumps({
         "status": "not ready",                          
         "data": {
