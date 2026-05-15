@@ -113,4 +113,10 @@ if __name__ == "__main__":
         # Arrêt propre si on fait Ctrl+C
         print("\nArrêt du programme...")
         calculateur.callback_bouton.cancel()
+        sock.sendto(json.dumps({
+        "status": "not ready",                          
+        "data": {
+            "value": "0",
+            "unite": "BPM"
+        }}).encode(), dest_addr)
         pi.stop()
